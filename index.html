@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Crack Damage Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 30px;
+      background-color: #f7f7f7;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .cards {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 200px;
+    }
+
+    canvas {
+      max-width: 600px;
+      margin: 0 auto 50px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏗️ Building Crack Damage Dashboard</h1>
+
+  <div class="cards" id="summary-cards"></div>
+
+  <canvas id="classChart"></canvas>
+  <canvas id="confidenceChart"></canvas>
+
+  <script>
+    fetch('damage_report.json')
+      .then(response => response.json())
+      .then(data => {
+        const total = data.length;
+
+        // Summary Counts by class
+        const classCount = {};
+        const confidenceData = [];
+
+        data.forEach(item => {
+          classCount[item.class] = (classCount[item.class] || 0) + 1;
+          confidenceData.push(item.confidence);
+        });
+
+        // 👉 1. Summary Cards
+        const summaryDiv = document.getElementById('summary-cards');
+        Object.entries(classCount).forEach(([cls, count]) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `<h3>${cls.replace('_', ' ')}</h3><p><strong>${count}</strong></p>`;
+          summaryDiv.appendChild(card);
+        });
+
+        // 👉 2. Class Distribution Pie Chart
+        new Chart(document.getElementById('classChart'), {
+          type: 'pie',
+          data: {
+            labels: Object.keys(classCount),
+            datasets: [{
+              label: 'Damage Class Count',
+              data: Object.values(classCount),
+              backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#77dd77', '#fdbf6f']
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: '🧱 Damage Type Distribution'
+              }
+            }
+          }
+        });
+
+        // 👉 3. Confidence Level Bar Chart
+        new Chart(document.getElementById('confidenceChart'), {
+          type: 'bar',
+          data: {
+            labels: confidenceData.map((_, i) => `#${i + 1}`),
+            datasets: [{
+              label: 'Confidence Score',
+              data: confidenceData,
+              backgroundColor: '#36a2eb'
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: '📈 Confidence Levels per Detection'
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 1
+              }
+            }
+          }
+        });
+
+      });
+  </script>
+
+</body>
+</html>
