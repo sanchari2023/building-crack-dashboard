@@ -21,6 +21,7 @@
       gap: 30px;
       justify-content: center;
       margin-bottom: 40px;
+      flex-wrap: wrap;
     }
 
     .card {
@@ -33,12 +34,13 @@
     }
 
     canvas {
-      max-width: 600px;
+      max-width: 800px;
       margin: 0 auto 50px;
       background: white;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      display: block;
     }
   </style>
 </head>
@@ -52,19 +54,26 @@
   <canvas id="confidenceChart"></canvas>
 
   <script>
-    fetch('damage_report.json')
+    fetch('damage_summary_dbscan.json') 
       .then(response => response.json())
       .then(data => {
-        const total = data.length;
+        // Check if it's summary JSON or detection JSON
+        const isSummary = !Array.isArray(data);
 
-        // Summary Counts by class
         const classCount = {};
         const confidenceData = [];
 
-        data.forEach(item => {
-          classCount[item.class] = (classCount[item.class] || 0) + 1;
-          confidenceData.push(item.confidence);
-        });
+        if (isSummary) {
+          // When data is already summary format
+          Object.entries(data).forEach(([cls, count]) => {
+            classCount[cls] = count;
+          });
+        } else {
+          data.forEach(item => {
+            classCount[item.class] = (classCount[item.class] || 0) + 1;
+            confidenceData.push(item.confidence);
+          });
+        }
 
         // 👉 1. Summary Cards
         const summaryDiv = document.getElementById('summary-cards');
@@ -75,56 +84,65 @@
           summaryDiv.appendChild(card);
         });
 
-        // 👉 2. Class Distribution Pie Chart
+        // 👉 2. Horizontal Bar Chart for Class Distribution
         new Chart(document.getElementById('classChart'), {
-          type: 'pie',
-          data: {
-            labels: Object.keys(classCount),
-            datasets: [{
-              label: 'Damage Class Count',
-              data: Object.values(classCount),
-              backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#77dd77', '#fdbf6f']
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              title: {
-                display: true,
-                text: '🧱 Damage Type Distribution'
-              }
-            }
-          }
-        });
-
-        // 👉 3. Confidence Level Bar Chart
-        new Chart(document.getElementById('confidenceChart'), {
           type: 'bar',
           data: {
-            labels: confidenceData.map((_, i) => `#${i + 1}`),
+            labels: Object.keys(classCount).map(label => label.replace('_', ' ')),
             datasets: [{
-              label: 'Confidence Score',
-              data: confidenceData,
-              backgroundColor: '#36a2eb'
+              label: 'Damage Count',
+              data: Object.values(classCount),
+              backgroundColor: ['#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#f44336']
             }]
           },
           options: {
+            indexAxis: 'y',
             responsive: true,
             plugins: {
               title: {
                 display: true,
-                text: '📈 Confidence Levels per Detection'
+                text: '🧱 Damage Type Distribution (Bar)'
               }
             },
             scales: {
-              y: {
-                beginAtZero: true,
-                max: 1
+              x: {
+                beginAtZero: true
               }
             }
           }
         });
 
+        // 👉 3. Confidence Bar Chart (only if raw detections)
+        if (!isSummary) {
+          new Chart(document.getElementById('confidenceChart'), {
+            type: 'bar',
+            data: {
+              labels: confidenceData.map((_, i) => `#${i + 1}`),
+              datasets: [{
+                label: 'Confidence Score',
+                data: confidenceData,
+                backgroundColor: '#36a2eb'
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                title: {
+                  display: true,
+                  text: '📈 Confidence Levels per Detection'
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 1
+                }
+              }
+            }
+          });
+        } else {
+          document.getElementById("confidenceChart").style.display = "none";
+        }
       });
   </script>
 
